@@ -1,0 +1,75 @@
+[build-system]
+requires = ["setuptools>=75"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "concierge"
+version = "0.1.0"
+description = "Concierge: a multi-agent reservation assistant (LangGraph + MCP + RAG + human-in-the-loop) served over web chat, WhatsApp, email and voice, with an evaluation harness."
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+dependencies = [
+  "anthropic>=2.13",
+  "langgraph>=1.2",
+  "langgraph-checkpoint-sqlite>=3.1",
+  "mcp>=2.3,<3",
+  "fastapi>=0.165",
+  "uvicorn[standard]>=0.54",
+  "httpx>=0.28",
+  "pydantic>=2.14",
+  "pydantic-settings>=2.16",
+  "sqlalchemy[asyncio]>=2.1",
+  "aiosqlite>=0.22",
+  "qdrant-client>=1.20",
+  "numpy>=2.0",
+  "pypdf>=7.0",
+  "pyyaml>=6.0",
+  "prometheus-client>=0.26",
+  "opentelemetry-sdk>=1.45",
+  "opentelemetry-exporter-otlp-proto-http>=1.45",
+  "opentelemetry-instrumentation-fastapi>=0.66b2",
+  "opentelemetry-instrumentation-httpx>=0.66b2",
+  "redis>=8.2",
+  "python-multipart>=0.0.34",
+  "tenacity>=9.0",
+  "tzdata>=2025.1",
+]
+
+[project.optional-dependencies]
+# Postgres for services, long-term memory and LangGraph checkpoints.
+postgres = ["asyncpg>=0.30", "langgraph-checkpoint-postgres>=3.0", "psycopg[binary,pool]>=3.2"]
+# Redis-backed LangGraph checkpointer (needs Redis 8 / Redis Stack modules).
+redis-checkpoint = ["langgraph-checkpoint-redis>=0.3"]
+# Dense ONNX embeddings + cross-encoder reranker (downloads models on first use).
+semantic = ["fastembed>=0.7"]
+# Local speech-to-text for the voice channel.
+voice = ["faster-whisper>=1.1"]
+dev = ["pytest>=8", "pytest-asyncio>=1.0", "ruff>=0.15", "fpdf2>=2.8"]
+loadtest = ["locust>=2.30"]
+
+[project.scripts]
+concierge = "scripts.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["agents*", "channels*", "common*", "evals*", "guardrails*", "mcp_server*", "rag*", "services*", "scripts*"]
+
+[tool.setuptools.package-data]
+"*" = ["*.yaml", "*.html", "*.js", "*.css", "*.md"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+testpaths = ["tests"]
+pythonpath = ["."]
+addopts = "-q"
+filterwarnings = ["ignore::DeprecationWarning"]
+
+[tool.ruff]
+line-length = 110
+target-version = "py311"
+extend-exclude = ["var", ".venv"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "ASYNC", "SIM"]
+ignore = ["E501", "B008", "SIM108", "UP040"]

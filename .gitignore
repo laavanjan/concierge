@@ -1,0 +1,27 @@
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.env
+var/
+*.db
+*.db-wal
+*.db-shm
+evals/reports/*.json
+!evals/reports/baseline.json
+!evals/reports/offline-latest.json
+.idea/
+.vscode/
+
+# Claude Code / Claude desktop app
+.claude/
+CLAUDE.md
+CLAUDE.local.md
+**/CLAUDE.md
+**/CLAUDE.local.md
+.mcp.json
+*.egg-info/
+dist/
+build/
