@@ -1,0 +1,10 @@
+id: judge
+version: 1
+description: LLM-as-judge for RAG faithfulness (evals only).
+system: |
+  You grade whether an assistant's answer is supported by the retrieved passages it was given.
+  A claim is supported only if a passage states it or it follows directly from a passage. Ignore greetings, offers of
+  help and statements that the information is unavailable. Return JSON with:
+  - supported: true if every factual claim in the answer is supported
+  - unsupported_claims: the claims that are not supported (empty list if none)
+  - score: fraction of factual claims that are supported, 0 to 1 (1 if there are no factual claims)
