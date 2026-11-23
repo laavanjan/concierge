@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Aurora Bay Hotel · Concierge demo</title>
+  <link rel="icon" href="/static/favicon.svg" />
+  <link rel="stylesheet" href="/static/chat.css" />
+</head>
+<body>
+  <header class="site">
+    <div class="brand">Aurora Bay Hotel <span class="tag">fictional demo property</span></div>
+    <nav><a href="/operator">Operator console</a><a href="/ops">Ops dashboard</a><a href="/docs">API</a></nav>
+  </header>
+
+  <main class="hero">
+    <div class="hero-copy">
+      <h1>Seaside stays, booked in a sentence.</h1>
+      <p>Ask the concierge to book, change or cancel a stay, compare prices, or explain any policy, with sources.
+        The same agent answers on WhatsApp, email and by voice.</p>
+      <ul class="tries">
+        <li><button data-try="Book a 3-night stay for 2 from 12 Dec, what's the cancellation policy?">Book a 3-night stay for 2 from 12 Dec, what's the cancellation policy?</button></li>
+        <li><button data-try="How much is the family suite from 28 Dec to 2 Jan for 4 people?">How much is the family suite from 28 Dec to 2 Jan for 4 people?</button></li>
+        <li><button data-try="Can I bring my dog?">Can I bring my dog?</button></li>
+        <li><button data-try="I want to cancel my booking">I want to cancel my booking</button></li>
+      </ul>
+    </div>
+    <div class="rooms">
+      <div class="room"><b>Standard Queen</b><span>from $140</span></div>
+      <div class="room"><b>Deluxe King Sea View</b><span>from $210</span></div>
+      <div class="room"><b>Family Suite</b><span>from $320</span></div>
+      <div class="room"><b>Penthouse Suite</b><span>from $750</span></div>
+    </div>
+  </main>
+
+  <section class="chat" id="chat" aria-label="Concierge chat">
+    <div class="chat-head">
+      <div><span class="dot"></span> Concierge</div>
+      <div class="chat-meta"><span id="mode" class="badge">…</span><button id="reset" title="New conversation">↺</button></div>
+    </div>
+    <div class="messages" id="messages" aria-live="polite"></div>
+    <div class="progress" id="progress"></div>
+    <form class="composer" id="composer">
+      <button type="button" id="mic" title="Speak (voice channel)" aria-label="Speak">🎙</button>
+      <input id="input" autocomplete="off" placeholder="Ask about rooms, prices or policies…" />
+      <button type="submit" id="send">Send</button>
+    </form>
+  </section>
+  <script src="/static/chat.js"></script>
+</body>
+</html>
