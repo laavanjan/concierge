@@ -1,0 +1,112 @@
+# Domain pack for the demo property. Swap this file (and data/policies/) to
+# re-target Concierge at car rental, tours or tickets: the architecture does
+# not change, only the mock data and the policies do.
+property:
+  id: aurora-bay
+  name: Aurora Bay Hotel
+  tagline: A fictional 26-room seaside hotel used as Concierge's demo property
+  currency: USD
+  timezone: UTC
+  check_in_time: "15:00"
+  check_out_time: "11:00"
+  tax_rate: 0.10
+  reservation_prefix: AUR
+  contact_email: frontdesk@aurora-bay.example
+  contact_phone: "+1 555 0100"
+
+room_types:
+  - code: STD
+    name: Standard Queen Room
+    standard_occupancy: 2
+    max_guests: 2
+    inventory: 12
+    base_rate: 140
+    bed: 1 queen bed
+    size_sqm: 22
+    view: garden
+    pets_allowed: true
+    aliases: [standard, queen, basic, cheapest, budget, std]
+    description: Cosy queen room with garden view, rain shower and a work desk.
+  - code: DLX
+    name: Deluxe King Sea View
+    standard_occupancy: 2
+    max_guests: 3
+    inventory: 8
+    base_rate: 210
+    bed: 1 king bed (extra bed available)
+    size_sqm: 30
+    view: sea
+    pets_allowed: true
+    aliases: [deluxe, king, sea view, ocean view, seaview, dlx]
+    description: Spacious king room with a balcony and sea view; a third guest sleeps on an extra bed.
+  - code: FAM
+    name: Family Suite
+    standard_occupancy: 4
+    max_guests: 4
+    inventory: 5
+    base_rate: 320
+    bed: 1 king bed + 2 single beds
+    size_sqm: 48
+    view: garden
+    pets_allowed: false
+    aliases: [family, family room, family suite, suite, kids room, fam]
+    description: Two-room suite with a separate kids' room, kitchenette and garden terrace.
+  - code: PEN
+    name: Penthouse Suite
+    standard_occupancy: 4
+    max_guests: 4
+    inventory: 1
+    base_rate: 750
+    bed: 2 king beds
+    size_sqm: 95
+    view: panoramic sea
+    pets_allowed: false
+    aliases: [penthouse, top floor, luxury, pen]
+    description: Top-floor suite with a private terrace, hot tub and panoramic sea view.
+
+rate_rules:
+  weekend:
+    nights: [FRI, SAT]
+    pct: 15
+  seasons:
+    - name: Festive peak
+      start: "12-20"
+      end: "01-05"
+      pct: 30
+    - name: Low season
+      start: "02-01"
+      end: "03-15"
+      pct: -10
+  # Dynamic pricing: applied per night from live inventory occupancy.
+  occupancy:
+    - min: 0.85
+      pct: 20
+    - min: 0.65
+      pct: 10
+  length_of_stay:
+    - min_nights: 7
+      pct: -12
+    - min_nights: 4
+      pct: -5
+  promo_codes:
+    WINTER10:
+      pct: -10
+      valid_from: "2026-12-01"
+      valid_to: "2027-02-28"
+      description: 10% off stays that start between 1 Dec 2026 and 28 Feb 2027.
+    STAYLONG:
+      pct: -8
+      min_nights: 5
+      description: 8% off stays of 5 or more nights.
+  extra_guest_fee_per_night: 40
+  quote_ttl_minutes: 30
+
+policies:
+  free_cancellation_hours: 48
+  peak_free_cancellation_days: 7
+  late_cancellation_charge_nights: 1
+  modification_cutoff_hours: 48
+  max_rooms_per_booking: 8
+  max_nights: 28
+  pet_fee_per_night: 30
+  children_free_under: 12
