@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Concierge · Ops dashboard</title>
+  <link rel="icon" href="/static/favicon.svg" />
+  <style>
+    .viz-root {
+      color-scheme: light;
+      --page: #f9f9f7; --surface-1: #fcfcfb; --text-primary: #0b0b0b; --text-secondary: #52514e; --muted: #898781;
+      --grid: #e1e0d9; --axis: #c3c2b7; --ring: rgba(11,11,11,0.10); --series-1: #2a78d6;
+      --good: #0ca30c; --warning: #fab219; --critical: #d03b3b; --good-text: #006300;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root:where(:not([data-theme="light"])) .viz-root {
+        color-scheme: dark;
+        --page: #0d0d0d; --surface-1: #1a1a19; --text-primary: #f0efec; --text-secondary: #c3c2b7; --muted: #898781;
+        --grid: #2c2c2a; --axis: #383835; --ring: rgba(255,255,255,0.10); --series-1: #3987e5; --good-text: #0ca30c;
+      }
+    }
+    body { margin: 0; font-family: system-ui, -apple-system, "Segoe UI", sans-serif; }
+    .viz-root { background: var(--page); color: var(--text-primary); min-height: 100vh; padding: 24px 32px 48px; }
+    header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 18px; }
+    header h1 { font-size: 18px; margin: 0; }
+    header nav a { color: var(--text-secondary); margin-left: 16px; font-size: 13px; text-decoration: none; }
+    .sub { color: var(--text-secondary); font-size: 13px; }
+    .grid { display: grid; grid-template-columns: repeat(12, 1fr); gap: 16px; }
+    .card { background: var(--surface-1); border: 1px solid var(--ring); border-radius: 12px; padding: 16px 18px; }
+    .span-3 { grid-column: span 3; } .span-4 { grid-column: span 4; } .span-5 { grid-column: span 5; }
+    .span-6 { grid-column: span 6; } .span-7 { grid-column: span 7; } .span-8 { grid-column: span 8; } .span-12 { grid-column: span 12; }
+    .label { font-size: 13px; color: var(--text-secondary); }
+    .value { font-size: 28px; font-weight: 600; margin-top: 6px; }
+    .hero .value { font-size: 52px; }
+    .note { font-size: 12px; color: var(--muted); margin-top: 6px; }
+    h2 { font-size: 14px; margin: 0 0 12px; font-weight: 600; }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    th { text-align: left; color: var(--muted); font-weight: 500; padding: 6px 8px; border-bottom: 1px solid var(--grid); }
+    td { padding: 7px 8px; border-bottom: 1px solid var(--grid); font-variant-numeric: tabular-nums; color: var(--text-primary); }
+    td.num, th.num { text-align: right; }
+    .barlist { display: grid; gap: 10px; }
+    .barrow { display: grid; grid-template-columns: 110px 1fr 56px; align-items: center; gap: 10px; font-size: 13px; position: relative; }
+    .track { height: 18px; position: relative; }
+    .bar { height: 18px; background: var(--series-1); border-radius: 0 4px 4px 0; min-width: 2px; }
+    .barrow .num { text-align: right; color: var(--text-secondary); font-variant-numeric: tabular-nums; }
+    .status { display: inline-flex; align-items: center; gap: 6px; }
+    .status i { width: 8px; height: 8px; border-radius: 99px; display: inline-block; }
+    .traces td { cursor: pointer; }
+    .traces tr:hover td { background: var(--page); }
+    .wf { margin-top: 12px; }
+    .wfrow { display: grid; grid-template-columns: 220px 1fr; align-items: center; gap: 10px; font-size: 12px; min-height: 22px; }
+    .wfrow .name { color: var(--text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .wftrack { position: relative; height: 14px; border-left: 1px solid var(--axis); }
+    .wfbar { position: absolute; top: 0; height: 14px; background: var(--series-1); border-radius: 4px; min-width: 2px; }
+    .wfdur { position: absolute; top: -1px; font-size: 11px; color: var(--text-secondary); white-space: nowrap; }
+    .tip { position: fixed; pointer-events: none; background: var(--surface-1); border: 1px solid var(--ring); border-radius: 8px;
+      padding: 8px 10px; font-size: 12px; box-shadow: 0 8px 24px rgba(0,0,0,.12); display: none; max-width: 360px; color: var(--text-primary); }
+    .tip b { display: block; margin-bottom: 4px; }
+    .empty { color: var(--muted); font-size: 13px; }
+    @media (max-width: 1000px) { .grid > * { grid-column: span 12 !important; } }
+  </style>
+</head>
+<body>
+<div class="viz-root">
+  <header>
+    <div><h1>Concierge ops</h1><div class="sub" id="subtitle">Latency, cost and routing per turn · refreshes every 5 s</div></div>
+    <nav><a href="/">Chat</a><a href="/operator">Operator console</a><a href="/metrics">Prometheus</a></nav>
+  </header>
+
+  <div class="grid">
+    <div class="card span-4 hero"><div class="label">Web chat p95 reply latency</div><div class="value" id="hero">–</div><div class="note">Target: under 5 s</div></div>
+    <div class="card span-2" style="grid-column: span 2"><div class="label">Turns</div><div class="value" id="turns">–</div></div>
+    <div class="card span-2" style="grid-column: span 2"><div class="label">Completed bookings</div><div class="value" id="bookings">–</div></div>
+    <div class="card span-2" style="grid-column: span 2"><div class="label">LLM spend</div><div class="value" id="spend">–</div></div>
+    <div class="card span-2" style="grid-column: span 2"><div class="label">Cost per booking</div><div class="value" id="cpb">–</div></div>
+
+    <div class="card span-7"><h2>Latency by channel</h2>
+      <table><thead><tr><th>Channel</th><th class="num">Turns</th><th class="num">p50</th><th class="num">p95</th><th class="num">First event p95</th><th class="num">Avg cost / turn</th></tr></thead>
+      <tbody id="channels"></tbody></table></div>
+    <div class="card span-5"><h2>Specialist invocations</h2><div class="barlist" id="agents"></div></div>
+
+    <div class="card span-5"><h2>Turn outcomes</h2>
+      <table><thead><tr><th>Outcome</th><th class="num">Turns</th></tr></thead><tbody id="statuses"></tbody></table>
+      <h2 style="margin-top:18px">Agent mode</h2>
+      <table><thead><tr><th>Mode</th><th class="num">Turns</th></tr></thead><tbody id="modes"></tbody></table></div>
+    <div class="card span-7"><h2>Recent turns</h2>
+      <table><thead><tr><th>Channel</th><th>Agents</th><th>Outcome</th><th class="num">Latency</th><th class="num">Cost</th><th class="num">Tokens in/out</th></tr></thead>
+      <tbody id="recent"></tbody></table></div>
+
+    <div class="card span-12"><h2>Recent traces <span class="sub">(click one for its span waterfall; full traces go to Phoenix/Langfuse via OTLP)</span></h2>
+      <table class="traces"><thead><tr><th>Root span</th><th>Channel</th><th>Session</th><th class="num">Spans</th><th class="num">Duration</th></tr></thead>
+      <tbody id="traces"></tbody></table>
+      <div class="wf" id="waterfall"></div></div>
+  </div>
+  <div class="tip" id="tip"></div>
+</div>
+<script>
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const ms = (v) => v == null ? "–" : v >= 1000 ? (v / 1000).toFixed(2) + " s" : Math.round(v) + " ms";
+const usd = (v, d = 4) => v == null ? "–" : "$" + Number(v).toFixed(d);
+const STATUS = { answered: ["var(--good)", "Answered"], pending_approval: ["var(--warning)", "Awaiting approval"], handoff: ["var(--warning)", "Handed to staff"], blocked: ["var(--critical)", "Blocked by guardrail"] };
+const tip = $("tip");
+function showTip(e, html) { tip.innerHTML = html; tip.style.display = "block"; tip.style.left = Math.min(e.clientX + 14, innerWidth - 380) + "px"; tip.style.top = (e.clientY + 14) + "px"; }
+function hideTip() { tip.style.display = "none"; }
+
+async function load() {
+  const s = await (await fetch("/ops/api/stats")).json();
+  const web = s.channels.web || {};
+  $("hero").textContent = ms(web.p95_ms);
+  $("turns").textContent = s.turns.toLocaleString();
+  $("bookings").textContent = s.completed_bookings.toLocaleString();
+  $("spend").textContent = usd(s.total_cost_usd, 2);
+  $("cpb").textContent = s.cost_per_completed_booking_usd == null ? "–" : usd(s.cost_per_completed_booking_usd, 3);
+  const ch = Object.entries(s.channels);
+  $("channels").innerHTML = ch.length ? ch.map(([name, c]) => `<tr><td>${esc(name)}</td><td class="num">${c.turns}</td><td class="num">${ms(c.p50_ms)}</td><td class="num">${ms(c.p95_ms)}</td><td class="num">${ms(c.first_event_p95_ms)}</td><td class="num">${usd(c.avg_cost_usd, 5)}</td></tr>`).join("") : `<tr><td colspan="6" class="empty">No turns yet: send a message from the chat page.</td></tr>`;
+  const agents = Object.entries(s.agents).sort((a, b) => b[1] - a[1]);
+  const max = Math.max(1, ...agents.map((a) => a[1]));
+  $("agents").innerHTML = agents.length ? agents.map(([name, n]) => `<div class="barrow" data-tip="<b>${esc(name)} agent</b>${n} invocation${n === 1 ? "" : "s"} (${Math.round(100 * n / s.turns)}% of turns)"><span>${esc(name)}</span><div class="track"><div class="bar" style="width:${(100 * n / max).toFixed(1)}%"></div></div><span class="num">${n}</span></div>`).join("") : `<div class="empty">No routed turns yet.</div>`;
+  $("statuses").innerHTML = Object.entries(s.status).map(([k, n]) => { const [color, label] = STATUS[k] || ["var(--muted)", k]; return `<tr><td><span class="status"><i style="background:${color}"></i>${esc(label)}</span></td><td class="num">${n}</td></tr>`; }).join("") || `<tr><td colspan="2" class="empty">–</td></tr>`;
+  $("modes").innerHTML = Object.entries(s.modes).map(([k, n]) => `<tr><td>${esc(k)}</td><td class="num">${n}</td></tr>`).join("") || `<tr><td colspan="2" class="empty">–</td></tr>`;
+  $("recent").innerHTML = s.recent.slice(0, 12).map((r) => `<tr><td>${esc(r.channel)}</td><td>${esc((r.agents || []).join(" + ") || "router")}</td><td>${esc((STATUS[r.status] || [0, r.status])[1])}</td><td class="num">${ms(r.latency_ms)}</td><td class="num">${usd(r.cost_usd, 5)}</td><td class="num">${r.input_tokens}/${r.output_tokens}</td></tr>`).join("") || `<tr><td colspan="6" class="empty">–</td></tr>`;
+  document.querySelectorAll("[data-tip]").forEach((n) => { n.onmousemove = (e) => showTip(e, n.dataset.tip); n.onmouseleave = hideTip; });
+  const traces = await (await fetch("/ops/api/traces?limit=12")).json();
+  $("traces").innerHTML = traces.map((t) => `<tr data-trace="${t.trace_id}"><td>${esc(t.root)}</td><td>${esc(t.channel || "")}</td><td>${esc(t.session_id || "")}</td><td class="num">${t.spans}</td><td class="num">${ms(t.duration_ms)}</td></tr>`).join("") || `<tr><td colspan="5" class="empty">No traces yet.</td></tr>`;
+  document.querySelectorAll("[data-trace]").forEach((row) => row.onclick = () => waterfall(row.dataset.trace));
+}
+
+async function waterfall(traceId) {
+  const spans = await (await fetch(`/ops/api/traces/${traceId}`)).json();
+  const t0 = Math.min(...spans.map((s) => s.start)), t1 = Math.max(...spans.map((s) => s.end || s.start));
+  const total = Math.max(1, t1 - t0);
+  const depth = {}; const byId = Object.fromEntries(spans.map((s) => [s.span_id, s]));
+  const d = (s) => depth[s.span_id] ??= (s.parent_id && byId[s.parent_id] ? d(byId[s.parent_id]) + 1 : 0);
+  $("waterfall").innerHTML = spans.map((s) => {
+    const left = 100 * (s.start - t0) / total, width = 100 * ((s.end || s.start) - s.start) / total;
+    const attrs = Object.entries(s.attributes).slice(0, 8).map(([k, v]) => `${esc(k)}: ${esc(v)}`).join("<br>");
+    return `<div class="wfrow" data-tip="<b>${esc(s.name)}</b>${ms(s.duration_ms)} · ${esc(s.status)}<br>${attrs}"><span class="name" style="padding-left:${d(s) * 12}px">${esc(s.name)}</span>
+      <div class="wftrack"><div class="wfbar" style="left:${left.toFixed(2)}%;width:${Math.max(width, 0.3).toFixed(2)}%"></div><span class="wfdur" style="left:calc(${Math.min(left + width, 88).toFixed(2)}% + 6px)">${ms(s.duration_ms)}</span></div></div>`;
+  }).join("");
+  document.querySelectorAll("#waterfall [data-tip]").forEach((n) => { n.onmousemove = (e) => showTip(e, n.dataset.tip); n.onmouseleave = hideTip; });
+}
+load(); setInterval(load, 5000);
+</script>
+</body>
+</html>
