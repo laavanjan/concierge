@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Concierge · Operator console</title>
+  <link rel="icon" href="/static/favicon.svg" />
+  <link rel="stylesheet" href="/static/chat.css" />
+  <style>
+    .wrap { max-width: 1200px; margin: 0 auto; padding: 8px 32px 40px; }
+    .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+    h2 { font-size: 16px; margin: 18px 0 10px; display: flex; gap: 8px; align-items: center; }
+    .count { font-size: 12px; background: var(--bg); border: 1px solid var(--line); border-radius: 99px; padding: 1px 8px; color: var(--muted); }
+    .card { background: #fff; border: 1px solid var(--line); border-radius: 12px; padding: 14px; margin-bottom: 12px; }
+    .card .top { display: flex; justify-content: space-between; font-size: 12px; color: var(--muted); }
+    .card .title { font-weight: 650; margin: 6px 0; }
+    .card .amount { font-size: 20px; font-weight: 700; }
+    .card pre { white-space: pre-wrap; font-size: 12px; background: var(--bg); border-radius: 8px; padding: 8px; max-height: 180px; overflow: auto; }
+    .row { display: flex; gap: 8px; margin-top: 10px; }
+    .row input, .row textarea { flex: 1; border: 1px solid var(--line); border-radius: 8px; padding: 8px; font: inherit; font-size: 13px; }
+    .btn { border: 0; border-radius: 8px; padding: 8px 12px; font-weight: 600; cursor: pointer; font-size: 13px; }
+    .ok { background: #22a06b; color: #fff; } .no { background: #fdecea; color: var(--err); } .neutral { background: var(--bg); border: 1px solid var(--line); }
+    .empty { color: var(--muted); font-size: 14px; padding: 12px 0; }
+    .keybar { display: flex; gap: 8px; align-items: center; font-size: 13px; color: var(--muted); }
+    .keybar input { border: 1px solid var(--line); border-radius: 8px; padding: 6px 8px; }
+  </style>
+</head>
+<body>
+  <header class="site">
+    <div class="brand">Concierge · Operator console</div>
+    <div class="keybar">API key <input id="key" type="password" placeholder="OPERATOR_API_KEY" /> Operator <input id="who" placeholder="you@hotel" /></div>
+  </header>
+  <div class="wrap">
+    <div class="cols">
+      <section><h2>Approvals <span class="count" id="ac">0</span></h2><div id="approvals"></div></section>
+      <section><h2>Handoff queue <span class="count" id="hc">0</span></h2><div id="handoffs"></div></section>
+    </div>
+  </div>
+<script>
+const $ = (id) => document.getElementById(id);
+$("key").value = localStorage.getItem("op.key") || "operator-dev-key";
+$("who").value = localStorage.getItem("op.who") || "duty.manager@aurora-bay.example";
+["key", "who"].forEach((k) => $(k).addEventListener("change", () => { localStorage.setItem("op." + k, $(k).value); refresh(); }));
+const headers = () => ({ "Authorization": "Bearer " + $("key").value, "X-Operator": $("who").value, "Content-Type": "application/json" });
+const api = async (path, opts = {}) => { const r = await fetch("/operator/api" + path, { headers: headers(), ...opts }); if (!r.ok) throw new Error(await r.text()); return r.json(); };
+const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const money = (v) => "$" + Number(v || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+async function decide(id, ok) {
+  const note = $("note-" + id).value || null;
+  try { const r = await api(`/approvals/${id}/${ok ? "approve" : "reject"}`, { method: "POST", body: JSON.stringify({ note }) });
+    alert(`Customer was told:\n\n${r.message_to_customer}`); } catch (e) { alert(e.message); }
+  refresh();
+}
+async function reply(id) { const text = $("reply-" + id).value; if (!text) return; await api(`/handoffs/${id}/reply`, { method: "POST", body: JSON.stringify({ text }) }); refresh(); }
+async function act(id, what) { await api(`/handoffs/${id}/${what}`, { method: "POST" }); refresh(); }
+async function transcript(sid, target) {
+  const d = await api(`/sessions/${encodeURIComponent(sid)}`);
+  $(target).textContent = d.transcript.map((m) => `${m.role}${m.agents && m.agents.length ? " (" + m.agents.join("+") + ")" : ""}: ${m.content}`).join("\n\n");
+}
+
+async function refresh() {
+  try {
+    const approvals = await api("/approvals?status=pending");
+    $("ac").textContent = approvals.length;
+    $("approvals").innerHTML = approvals.length ? approvals.map((a) => `
+      <div class="card">
+        <div class="top"><span>${esc(a.id)} · ${esc(a.action)}</span><span>${esc(a.channel)} · ${new Date(a.created_at).toLocaleTimeString()}</span></div>
+        <div class="amount">${money(a.amount)}</div>
+        <div class="title">${esc(a.reason)}</div>
+        <pre>${esc(JSON.stringify(a.args, null, 2))}</pre>
+        <div class="row"><input id="note-${a.id}" placeholder="Note to the customer (optional)" /></div>
+        <div class="row"><button class="btn ok" onclick="decide('${a.id}', true)">Approve</button><button class="btn no" onclick="decide('${a.id}', false)">Decline</button>
+          <button class="btn neutral" onclick="transcript('${a.session_id}', 't-${a.id}')">Conversation</button></div>
+        <pre id="t-${a.id}"></pre>
+      </div>`).join("") : '<div class="empty">Nothing waiting for approval.</div>';
+    const handoffs = (await api("/handoffs")).filter((h) => h.status !== "closed");
+    $("hc").textContent = handoffs.length;
+    $("handoffs").innerHTML = handoffs.length ? handoffs.map((h) => `
+      <div class="card">
+        <div class="top"><span>${esc(h.id)} · ${esc(h.reason)} · <b>${esc(h.status)}</b>${h.claimed_by ? " by " + esc(h.claimed_by) : ""}</span><span>${esc(h.channel)}</span></div>
+        <pre>${esc(h.summary)}</pre>
+        <div class="row"><textarea id="reply-${h.id}" rows="2" placeholder="Reply to the customer on ${esc(h.channel)}"></textarea></div>
+        <div class="row"><button class="btn ok" onclick="reply('${h.id}')">Send reply</button>
+          ${h.status === "open" ? `<button class="btn neutral" onclick="act('${h.id}','claim')">Claim (pause bot)</button>` : ""}
+          <button class="btn neutral" onclick="act('${h.id}','close')">Close (resume bot)</button>
+          <button class="btn neutral" onclick="transcript('${h.session_id}', 'th-${h.id}')">Conversation</button></div>
+        <pre id="th-${h.id}"></pre>
+      </div>`).join("") : '<div class="empty">No open handoffs.</div>';
+  } catch (e) { $("approvals").innerHTML = `<div class="empty">Can't load: ${esc(e.message)}</div>`; }
+}
+refresh(); setInterval(() => { if (!document.activeElement || !["INPUT", "TEXTAREA"].includes(document.activeElement.tagName)) refresh(); }, 5000);
+</script>
+</body>
+</html>
