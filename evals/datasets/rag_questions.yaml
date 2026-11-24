@@ -1,0 +1,68 @@
+# Labelled policy questions. `relevant`: chunk ids that answer the question (Recall@5 counts a hit if any is in
+# the top 5). `facts`: strings the answer must contain. `answerable: false` questions must be refused.
+questions:
+  - {q: "What's your cancellation policy?", relevant: [cancellation-and-refunds#free-cancellation-window, cancellation-and-refunds#late-cancellation], facts: ["48 hours"]}
+  - {q: "Can I cancel for free?", relevant: [cancellation-and-refunds#free-cancellation-window], facts: ["48 hours"]}
+  - {q: "What happens if I cancel the day before arrival?", relevant: [cancellation-and-refunds#late-cancellation], facts: ["first night"]}
+  - {q: "Is there a different cancellation rule over Christmas and New Year?", relevant: [cancellation-and-refunds#festive-peak-season], facts: ["7 days"]}
+  - {q: "What if I don't show up?", relevant: [cancellation-and-refunds#no-shows], facts: ["no-show"]}
+  - {q: "How long does a refund take?", relevant: [cancellation-and-refunds#how-refunds-are-paid], facts: ["5 to 10 business days"]}
+  - {q: "Do I pay when I book or at the hotel?", relevant: [cancellation-and-refunds#payment-at-booking], facts: ["prepaid"]}
+  - {q: "Can I get money back if something went wrong during my stay?", relevant: [cancellation-and-refunds#goodwill-refunds], facts: ["manager"]}
+  - {q: "Can I change my dates after booking?", relevant: [booking-changes-and-groups#changing-dates-room-type-or-guests], facts: ["48 hours"]}
+  - {q: "If my new dates are cheaper do I get the difference back?", relevant: [booking-changes-and-groups#price-differences-after-a-change], facts: ["refunded"]}
+  - {q: "Can I change my booking the day before I arrive?", relevant: [booking-changes-and-groups#changes-inside-48-hours], facts: ["front desk"]}
+  - {q: "Can I change the name on the reservation?", relevant: [booking-changes-and-groups#name-changes], facts: ["free of charge"]}
+  - {q: "We are a group needing 5 rooms, how does that work?", relevant: [booking-changes-and-groups#group-and-large-bookings], facts: ["4 or more rooms"]}
+  - {q: "What is the longest stay I can book?", relevant: [booking-changes-and-groups#maximum-stay], facts: ["28 nights"]}
+  - {q: "What time is check-in?", relevant: [check-in-and-stay#check-in-time], facts: ["15:00"]}
+  - {q: "Can I check in early?", relevant: [check-in-and-stay#check-in-time], facts: ["12:00"]}
+  - {q: "When do I have to check out?", relevant: [check-in-and-stay#check-out-time], facts: ["11:00"]}
+  - {q: "How much is a late checkout?", relevant: [check-in-and-stay#check-out-time], facts: ["40 USD"]}
+  - {q: "Do you take a deposit on arrival?", relevant: [check-in-and-stay#incidentals-deposit], facts: ["100 USD"]}
+  - {q: "Can I smoke on the balcony?", relevant: [check-in-and-stay#quiet-hours-and-smoking], facts: ["smoke-free"]}
+  - {q: "What are the quiet hours?", relevant: [check-in-and-stay#quiet-hours-and-smoking], facts: ["22:00"]}
+  - {q: "Do you have wheelchair accessible rooms?", relevant: [check-in-and-stay#accessibility], facts: ["roll-in showers"]}
+  - {q: "Can I bring my dog?", relevant: [pets-and-children#pets], facts: ["15 kg"]}
+  - {q: "Are pets allowed in the family suite?", relevant: [pets-and-children#pets], facts: ["not allowed"]}
+  - {q: "Is my guide dog allowed?", relevant: [pets-and-children#service-animals], facts: ["free of charge"]}
+  - {q: "Do kids stay free?", relevant: [pets-and-children#children], facts: ["under 12"]}
+  - {q: "Can we get an extra bed?", relevant: [pets-and-children#extra-beds], facts: ["40 USD"]}
+  - {q: "Is breakfast included?", relevant: [faq#is-breakfast-included], facts: ["18 USD"]}
+  - {q: "How much is parking?", relevant: [faq#do-you-have-parking], facts: ["15 USD"]}
+  - {q: "Do you have EV chargers?", relevant: [faq#do-you-have-parking], facts: ["electric"]}
+  - {q: "Is the wifi free?", relevant: [faq#is-there-wifi], facts: ["free"]}
+  - {q: "Do you offer an airport shuttle?", relevant: [faq#do-you-offer-airport-transfers], facts: ["45 USD"]}
+  - {q: "When is the pool open?", relevant: [faq#what-are-the-pool-and-gym-hours, house-rules-and-safety#pool-rules], facts: ["21:00"]}
+  - {q: "Which cards do you accept?", relevant: [faq#which-payment-methods-do-you-accept], facts: ["Visa"]}
+  - {q: "How do I contact the front desk?", relevant: [faq#how-can-i-contact-the-front-desk], facts: ["24 hours"]}
+  - {q: "Can I leave my bags after checkout?", relevant: [faq#can-i-store-luggage-before-check-in-or-a], facts: ["free"]}
+  - {q: "Is there a restaurant for dinner?", relevant: [faq#do-you-have-a-restaurant], facts: ["18:00"]}
+  - {q: "Can friends visit me in my room at night?", relevant: [house-rules-and-safety#visitors], facts: ["22:00"]}
+  - {q: "Is there a lifeguard at the pool?", relevant: [house-rules-and-safety#pool-rules], facts: ["no lifeguard"]}
+  - {q: "Is there a safe in the room for my laptop?", relevant: [house-rules-and-safety#valuables], facts: ["safe"]}
+  - {q: "What should I do if the fire alarm goes off?", relevant: [house-rules-and-safety#fire-safety], facts: ["stairs"]}
+  - {q: "I left my charger in the room after checkout", relevant: [house-rules-and-safety#lost-property], facts: ["90 days"]}
+  - {q: "Should I send my card number in the chat?", relevant: [privacy-and-payments#card-details], facts: ["secure payment link"]}
+  - {q: "How do I get my data deleted?", relevant: [privacy-and-payments#your-data-rights], facts: ["30 days"]}
+  - {q: "Why do you need my email to look up a booking?", relevant: [privacy-and-payments#booking-security], facts: ["booking reference"]}
+  - {q: "What are your base room rates?", relevant: [rates-and-pricing#base-rates], facts: ["210 USD"]}
+  - {q: "Why are weekends more expensive?", relevant: [rates-and-pricing#weekend-and-seasonal-adjustments], facts: ["15%"]}
+  - {q: "Why do prices change when the hotel is busy?", relevant: [rates-and-pricing#demand-based-pricing], facts: ["65%"]}
+  - {q: "Is there a discount for a week-long stay?", relevant: [rates-and-pricing#longer-stays], facts: ["12%"]}
+  - {q: "What does the WINTER10 code give me?", relevant: [rates-and-pricing#promotion-codes], facts: ["10%"]}
+  - {q: "Is tax included in the price?", relevant: [rates-and-pricing#extra-guests-and-taxes], facts: ["10%"]}
+  - {q: "Does the deluxe room have a balcony?", relevant: [rooms-and-suites#deluxe-king-sea-view], facts: ["balcony"]}
+  - {q: "How many people fit in the family suite?", relevant: [rooms-and-suites#family-suite], facts: ["4 guests"]}
+  - {q: "Does the penthouse have a hot tub?", relevant: [rooms-and-suites#penthouse-suite], facts: ["hot tub"]}
+unanswerable:
+  - "Do you have a casino?"
+  - "What is the capital of France?"
+  - "Can you recommend a good stock to buy?"
+  - "Who won the football world cup?"
+  - "Write me a poem about the ocean"
+  - "What's the weather like tomorrow?"
+  - "How do I reset my iPhone?"
+  - "What is your opinion on the election?"
+  - "Can you translate this into Japanese for me?"
+  - "Tell me a joke"
