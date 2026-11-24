@@ -1,0 +1,13 @@
+.venv
+var
+.git
+.github
+.pytest_cache
+.ruff_cache
+**/__pycache__
+*.pyc
+.env
+evals/reports/*.json
+!evals/reports/baseline.json
+deploy/helm
+docs
