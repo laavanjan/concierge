@@ -1,0 +1,7 @@
+apiVersion: v2
+name: concierge
+description: Multi-agent reservation assistant (LangGraph + MCP + RAG + human-in-the-loop) over chat, WhatsApp, email and voice
+type: application
+version: 0.1.0
+appVersion: "0.1.0"
+keywords: [llm, agents, langgraph, mcp, rag]
