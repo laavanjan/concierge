@@ -1,0 +1,25 @@
+{
+  "title": "Concierge",
+  "uid": "concierge",
+  "schemaVersion": 39,
+  "refresh": "10s",
+  "time": {"from": "now-1h", "to": "now"},
+  "panels": [
+    {"type": "timeseries", "title": "p95 reply latency by channel (s)", "gridPos": {"x": 0, "y": 0, "w": 12, "h": 8},
+     "targets": [{"expr": "histogram_quantile(0.95, sum by (le, channel) (rate(concierge_turn_latency_seconds_bucket[5m])))", "legendFormat": "{{channel}}"}]},
+    {"type": "timeseries", "title": "LLM spend (USD per hour) by model", "gridPos": {"x": 12, "y": 0, "w": 12, "h": 8},
+     "targets": [{"expr": "sum by (model) (rate(concierge_llm_cost_usd_total[5m])) * 3600", "legendFormat": "{{model}}"}]},
+    {"type": "timeseries", "title": "Tool calls by status", "gridPos": {"x": 0, "y": 8, "w": 12, "h": 8},
+     "targets": [{"expr": "sum by (status) (rate(concierge_tool_calls_total[5m]))", "legendFormat": "{{status}}"}]},
+    {"type": "timeseries", "title": "Guardrail events", "gridPos": {"x": 12, "y": 8, "w": 12, "h": 8},
+     "targets": [{"expr": "sum by (stage, kind) (rate(concierge_guardrail_events_total[5m]))", "legendFormat": "{{stage}} {{kind}}"}]},
+    {"type": "stat", "title": "Handoffs (1h)", "gridPos": {"x": 0, "y": 16, "w": 6, "h": 5},
+     "targets": [{"expr": "sum(increase(concierge_handoffs_total[1h]))"}]},
+    {"type": "stat", "title": "Approvals requested (1h)", "gridPos": {"x": 6, "y": 16, "w": 6, "h": 5},
+     "targets": [{"expr": "sum(increase(concierge_approvals_total[1h]))"}]},
+    {"type": "stat", "title": "Fallback activations (1h)", "gridPos": {"x": 12, "y": 16, "w": 6, "h": 5},
+     "targets": [{"expr": "sum(increase(concierge_fallbacks_total[1h]))"}]},
+    {"type": "stat", "title": "Budget overruns (1h)", "gridPos": {"x": 18, "y": 16, "w": 6, "h": 5},
+     "targets": [{"expr": "sum(increase(concierge_budget_exceeded_total[1h]))"}]}
+  ]
+}
