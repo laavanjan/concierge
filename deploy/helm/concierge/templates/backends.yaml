@@ -1,0 +1,99 @@
+{{- $root := . -}}
+{{- range $name, $svc := .Values.backends }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "concierge.name" $root }}-{{ $name }}
+  labels: {{- include "concierge.labels" $root | nindent 4 }}
+    app.kubernetes.io/component: {{ $name }}
+spec:
+  replicas: {{ $svc.replicas }}
+  selector:
+    matchLabels: {app.kubernetes.io/instance: {{ $root.Release.Name }}, app.kubernetes.io/component: {{ $name }}}
+  template:
+    metadata:
+      labels: {{- include "concierge.labels" $root | nindent 8 }}
+        app.kubernetes.io/component: {{ $name }}
+    spec:
+      securityContext: {runAsNonRoot: true, runAsUser: 10001}
+      containers:
+        - name: {{ $name }}
+          image: "{{ $root.Values.image.repository }}:{{ $root.Values.image.tag }}"
+          args: ["uvicorn", "{{ $svc.module }}", "--host", "0.0.0.0", "--port", "{{ $svc.port }}"]
+          ports: [{name: http, containerPort: {{ $svc.port }}}]
+          envFrom: {{- include "concierge.envFrom" $root | nindent 12 }}
+          env: {{- include "concierge.env" $root | nindent 12 }}
+          readinessProbe: {httpGet: {path: /health, port: http}, periodSeconds: 5}
+          livenessProbe: {httpGet: {path: /health, port: http}, initialDelaySeconds: 10, periodSeconds: 10}
+          resources: {{- toYaml $root.Values.backendResources | nindent 12 }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "concierge.name" $root }}-{{ $name }}
+  labels: {{- include "concierge.labels" $root | nindent 4 }}
+spec:
+  selector: {app.kubernetes.io/instance: {{ $root.Release.Name }}, app.kubernetes.io/component: {{ $name }}}
+  ports: [{name: http, port: {{ $svc.port }}, targetPort: http}]
+{{- end }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "concierge.name" . }}-mcp
+  labels: {{- include "concierge.labels" . | nindent 4 }}
+    app.kubernetes.io/component: mcp
+spec:
+  replicas: {{ .Values.mcp.replicas }}
+  selector:
+    matchLabels: {app.kubernetes.io/instance: {{ .Release.Name }}, app.kubernetes.io/component: mcp}
+  template:
+    metadata:
+      labels: {{- include "concierge.labels" . | nindent 8 }}
+        app.kubernetes.io/component: mcp
+    spec:
+      securityContext: {runAsNonRoot: true, runAsUser: 10001}
+      containers:
+        - name: mcp
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          args: ["python", "-m", "mcp_server", "--transport", "http", "--port", "{{ .Values.mcp.port }}"]
+          ports: [{name: http, containerPort: {{ .Values.mcp.port }}}]
+          envFrom: {{- include "concierge.envFrom" . | nindent 12 }}
+          env: {{- include "concierge.env" . | nindent 12 }}
+          readinessProbe: {tcpSocket: {port: http}, periodSeconds: 5}
+          resources: {{- toYaml .Values.backendResources | nindent 12 }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "concierge.name" . }}-mcp
+spec:
+  selector: {app.kubernetes.io/instance: {{ .Release.Name }}, app.kubernetes.io/component: mcp}
+  ports: [{name: http, port: {{ .Values.mcp.port }}, targetPort: http}]
+{{- if .Values.worker.enabled }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "concierge.name" . }}-worker
+  labels: {{- include "concierge.labels" . | nindent 4 }}
+    app.kubernetes.io/component: worker
+spec:
+  replicas: {{ .Values.worker.replicas }}
+  selector:
+    matchLabels: {app.kubernetes.io/instance: {{ .Release.Name }}, app.kubernetes.io/component: worker}
+  template:
+    metadata:
+      labels: {{- include "concierge.labels" . | nindent 8 }}
+        app.kubernetes.io/component: worker
+    spec:
+      securityContext: {runAsNonRoot: true, runAsUser: 10001}
+      containers:
+        - name: worker
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          args: ["python", "-m", "channels.worker"]
+          envFrom: {{- include "concierge.envFrom" . | nindent 12 }}
+          env: {{- include "concierge.env" . | nindent 12 }}
+          resources: {{- toYaml .Values.backendResources | nindent 12 }}
+{{- end }}
