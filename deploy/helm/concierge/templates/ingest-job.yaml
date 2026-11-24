@@ -1,0 +1,21 @@
+# Rebuilds the policy index in Qdrant on every install/upgrade (no-op when the corpus fingerprint is unchanged).
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "concierge.name" . }}-ingest-{{ .Release.Revision }}
+  labels: {{- include "concierge.labels" . | nindent 4 }}
+  annotations:
+    "helm.sh/hook": post-install,post-upgrade
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+spec:
+  backoffLimit: 3
+  template:
+    spec:
+      restartPolicy: OnFailure
+      securityContext: {runAsNonRoot: true, runAsUser: 10001}
+      containers:
+        - name: ingest
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          args: ["python", "-m", "rag.ingest"]
+          envFrom: {{- include "concierge.envFrom" . | nindent 12 }}
+          env: {{- include "concierge.env" . | nindent 12 }}
