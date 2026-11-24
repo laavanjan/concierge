@@ -1,0 +1,17 @@
+# Fault-injection scenarios. Every injected failure must end gracefully: either the system recovers (retry,
+# fallback model, deterministic agent) and answers, or it hands off to staff. Never a crash, never a false success.
+scenarios:
+  - {id: rel01, fault: {tool: search_availability, times: 99}, turns: ["book 12-15 Dec for 2"], expect: [handoff]}
+  - {id: rel02, fault: {tool: search_availability, times: 2}, turns: ["book 12-15 Dec for 2"], expect: [answered], note: "transient error recovered by retry"}
+  - {id: rel03, fault: {tool: get_quote, times: 99}, turns: ["book the deluxe king 12-15 Dec for 2"], expect: [handoff]}
+  - {id: rel04, fault: {tool: create_booking, times: 99}, turns: ["book the deluxe king 12-15 Dec for 2", "yes, Alex Morgan, alex@example.com"], expect: [handoff], forbid_text: ["You're booked"]}
+  - {id: rel05, fault: {tool: get_quote, mode: timeout, times: 99}, turns: ["book the deluxe king 12-15 Dec for 2"], expect: [handoff]}
+  - {id: rel06, fault: {tool: "*", times: 99}, turns: ["book a 3-night stay for 2 from 12 Dec, what's the cancellation policy?"], expect: [handoff]}
+  - {id: rel07, fault: {retrieval: error}, turns: ["can I bring my dog?"], expect: [handoff, answered], forbid_text: ["15 kg"]}
+  - {id: rel08, fault: {models: primary_down}, turns: ["book 12-15 Dec for 2"], expect: [answered], expect_mode: llm, note: "fallback model answers"}
+  - {id: rel09, fault: {models: all_down}, turns: ["book the deluxe king 12-15 Dec for 2"], expect: [answered], expect_mode: degraded, note: "deterministic agent answers"}
+  - {id: rel10, fault: {models: router_down}, turns: ["can I bring my dog?"], expect: [answered], note: "rules router takes over"}
+  - {id: rel11, setup: true, fault: {tool: preview_cancellation, times: 99}, turns: ["cancel {rid0}, email {email}"], expect: [handoff]}
+  - {id: rel12, setup: true, fault: {tool: modify_booking, times: 99}, turns: ["move {rid0} to 20 Dec, email {email}", "yes"], expect: [handoff]}
+  - {id: rel13, setup: true, fault: {tool: get_booking, times: 99}, turns: ["look up my booking {rid0}, email {email}"], expect: [handoff]}
+  - {id: rel14, fault: {models: all_down}, turns: ["can I bring my dog?"], expect: [answered], expect_mode: degraded}
