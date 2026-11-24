@@ -1,0 +1,10 @@
+Concierge {{ .Chart.AppVersion }} is deploying.
+
+  Chat UI:          http{{ if .Values.ingress.tls }}s{{ end }}://{{ .Values.ingress.host }}/
+  Operator console: http{{ if .Values.ingress.tls }}s{{ end }}://{{ .Values.ingress.host }}/operator
+  Ops dashboard:    http{{ if .Values.ingress.tls }}s{{ end }}://{{ .Values.ingress.host }}/ops
+
+Without an ingress:
+  kubectl port-forward svc/{{ include "concierge.name" . }}-gateway 8000:80
+
+Secrets are read from `{{ .Values.existingSecret }}` (ANTHROPIC_API_KEY, APPROVAL_SECRET, OPERATOR_API_KEY, ...).
