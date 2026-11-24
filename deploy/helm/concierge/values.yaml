@@ -1,0 +1,65 @@
+image:
+  repository: ghcr.io/your-org/concierge
+  tag: "0.1.0"
+  pullPolicy: IfNotPresent
+
+# Stateful dependencies are external (managed Postgres/Redis/Qdrant, or the bitnami/qdrant charts on k3s).
+external:
+  postgresHost: concierge-postgresql
+  postgresUser: concierge
+  postgresPasswordSecret: concierge-postgresql   # secret with key `password`
+  redisUrl: redis://concierge-redis-master:6379/0
+  qdrantUrl: http://concierge-qdrant:6333
+  otlpEndpoint: ""                              # e.g. http://phoenix:6006 or a Langfuse OTLP endpoint
+
+config:
+  LLM_MODE: auto
+  AGENT_MODEL: anthropic:claude-opus-5-5
+  AGENT_FALLBACK_MODEL: anthropic:claude-sonnet-5-5
+  AGENT_EFFORT: low
+  ROUTER_MODEL: anthropic:claude-haiku-5-5
+  CHECKPOINTER: redis
+  EMBEDDING_PROVIDER: hashing
+  RERANKER: heuristic
+  TURN_LATENCY_BUDGET_MS: "5000"
+  TURN_COST_BUDGET_USD: "0.05"
+  LOG_JSON: "true"
+  PUBLIC_BASE_URL: https://concierge.example.com
+
+# Created by you (kubectl create secret generic concierge-secrets --from-literal=...). Keys used if present:
+# ANTHROPIC_API_KEY, APPROVAL_SECRET, OPERATOR_API_KEY, TWILIO_AUTH_TOKEN, META_APP_SECRET, SMTP_PASSWORD, ...
+existingSecret: concierge-secrets
+
+gateway:
+  replicas: 2
+  port: 8000
+  resources: {requests: {cpu: 250m, memory: 512Mi}, limits: {cpu: "1", memory: 1Gi}}
+  autoscaling: {enabled: true, minReplicas: 2, maxReplicas: 8, targetCPU: 70}
+
+backends:
+  inventory: {module: services.inventory.app:app, port: 8001, replicas: 2, database: inventory}
+  pricing: {module: services.pricing.app:app, port: 8002, replicas: 2, database: pricing}
+  reservations: {module: services.reservations.app:app, port: 8003, replicas: 2, database: reservations}
+
+mcp:
+  replicas: 2
+  port: 8100
+
+worker:
+  enabled: true
+  replicas: 1
+
+backendResources: {requests: {cpu: 100m, memory: 256Mi}, limits: {cpu: 500m, memory: 512Mi}}
+
+ingress:
+  enabled: true
+  className: traefik        # k3s default; use nginx on other clusters
+  host: concierge.example.com
+  tls: false
+
+podDisruptionBudget:
+  enabled: true
+  minAvailable: 1
+
+serviceMonitor:
+  enabled: false            # set true with the Prometheus Operator
