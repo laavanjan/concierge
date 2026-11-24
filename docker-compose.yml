@@ -1,0 +1,129 @@
+# Full stack for development:  docker compose up --build
+#   chat:      http://localhost:8000        operator: http://localhost:8000/operator     ops: http://localhost:8000/ops
+#   traces:    http://localhost:6006 (Arize Phoenix)
+#   metrics:   docker compose --profile monitoring up   -> Grafana http://localhost:3000 (admin/admin)
+#   small LLM: docker compose --profile slm up          -> Ollama for ROUTER_MODEL=ollama:qwen2.5:3b
+
+x-app: &app
+  build: .
+  image: concierge:dev
+  env_file:
+    - path: .env
+      required: false
+  restart: unless-stopped
+  environment: &env
+    CONCIERGE_TODAY: ${CONCIERGE_TODAY:-}
+    REDIS_URL: redis://redis:6379/0
+    INVENTORY_URL: http://inventory:8001
+    PRICING_URL: http://pricing:8002
+    RESERVATIONS_URL: http://reservations:8003
+    MCP_URL: http://mcp:8100/mcp
+    INVENTORY_DB_URL: postgresql+asyncpg://concierge:concierge@postgres:5432/inventory
+    PRICING_DB_URL: postgresql+asyncpg://concierge:concierge@postgres:5432/pricing
+    RESERVATIONS_DB_URL: postgresql+asyncpg://concierge:concierge@postgres:5432/reservations
+    MEMORY_DB_URL: postgresql+asyncpg://concierge:concierge@postgres:5432/concierge
+    CHECKPOINTER: redis
+    QDRANT_URL: http://qdrant:6333
+    OTEL_EXPORTER_OTLP_ENDPOINT: http://phoenix:6006
+    APPROVAL_SECRET: ${APPROVAL_SECRET:-compose-dev-secret}
+    LOG_JSON: "true"
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: concierge
+      POSTGRES_PASSWORD: concierge
+      POSTGRES_DB: concierge
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./deploy/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U concierge"]
+      interval: 5s
+      retries: 20
+
+  redis:
+    image: redis:8   # Redis 8 bundles JSON + Search, needed by the LangGraph Redis checkpointer
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      retries: 20
+
+  qdrant:
+    image: qdrant/qdrant:latest
+    volumes: [qdrant:/qdrant/storage]
+
+  phoenix:
+    image: arizephoenix/phoenix:latest
+    ports: ["6006:6006"]
+
+  inventory:
+    <<: *app
+    command: ["uvicorn", "services.inventory.app:app", "--host", "0.0.0.0", "--port", "8001"]
+    depends_on: {postgres: {condition: service_healthy}}
+    healthcheck: {test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8001/health')"], interval: 10s}
+
+  pricing:
+    <<: *app
+    command: ["uvicorn", "services.pricing.app:app", "--host", "0.0.0.0", "--port", "8002"]
+    depends_on: {postgres: {condition: service_healthy}, inventory: {condition: service_started}}
+    healthcheck: {test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8002/health')"], interval: 10s}
+
+  reservations:
+    <<: *app
+    command: ["uvicorn", "services.reservations.app:app", "--host", "0.0.0.0", "--port", "8003"]
+    depends_on: {postgres: {condition: service_healthy}, redis: {condition: service_healthy}}
+    healthcheck: {test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8003/health')"], interval: 10s}
+
+  mcp:
+    <<: *app
+    command: ["python", "-m", "mcp_server", "--transport", "http", "--port", "8100"]
+    depends_on: [inventory, pricing, reservations]
+    healthcheck: {disable: true}
+
+  ingest:
+    <<: *app
+    restart: "no"
+    command: ["python", "-m", "rag.ingest"]
+    depends_on: [qdrant]
+    healthcheck: {disable: true}
+
+  gateway:
+    <<: *app
+    ports: ["8000:8000"]
+    depends_on:
+      mcp: {condition: service_started}
+      ingest: {condition: service_completed_successfully}
+      redis: {condition: service_healthy}
+
+  worker:
+    <<: *app
+    command: ["python", "-m", "channels.worker"]
+    depends_on: {redis: {condition: service_healthy}}
+    healthcheck: {disable: true}
+
+  prometheus:
+    image: prom/prometheus:latest
+    profiles: [monitoring]
+    volumes: ["./deploy/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro"]
+    ports: ["9090:9090"]
+
+  grafana:
+    image: grafana/grafana:latest
+    profiles: [monitoring]
+    ports: ["3000:3000"]
+    volumes:
+      - ./deploy/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./deploy/grafana/dashboards:/var/lib/grafana/dashboards:ro
+
+  ollama:
+    image: ollama/ollama:latest
+    profiles: [slm]
+    ports: ["11434:11434"]
+    volumes: [ollama:/root/.ollama]
+
+volumes:
+  pgdata:
+  qdrant:
+  ollama:
